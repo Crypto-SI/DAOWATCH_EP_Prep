@@ -1,0 +1,19 @@
+{
+  "name": "dao-watch-automation",
+  "version": "1.0.0",
+  "description": "Automation tool for DAO Watch episode preparation",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "server": "nodemon server/src/index.js",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && npm install --prefix client && npm install --prefix server"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+} 
