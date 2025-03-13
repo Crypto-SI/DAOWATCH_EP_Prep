@@ -3,19 +3,9 @@
   "name": "DAO Watch Automation Tool",
   "icons": [
     {
-      "src": "favicon.ico",
+      "src": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAD2ElEQVR4Ae3WA5AcWRiG4e+cbdu2bdtYr23btm3btm3bttfj5NR0zXZOdU9vZTuV96lf9Z9+v+/tQf/i36Np1t/1vwGdA+iODR5t7g6p81FMObXYJyVOy7WbIY8FdTyInG61pO5Hsfuv1g1gzs3f3TbVHnQQ2I+V0CZnuGYP2hs/2C+kZB1QxdK0xTb1fA9lrHWGOhgwKNRPFM+eGzdJ6QTIMdTD51BLmHH2gg4EJdavcBnqiDOeN6QOqOGNJ5A+IbzWlPG9ob0Bd5nGSuIVFisMQcbfvdEcagbT3vO08gqLmMYbD0jt6aCDQRU7ZnzXEw0xg5M/9YVajJnpfFY/9obrb3/7RHsArpCIqHKGSKKO9Xv80ANqPZaIXZ0rSO1Cax9A0u/OUGuQ8R8OukKewQy1S3lkKGEfzUWjlv9cEDXvO0HOxQw0xXvP74xqNrcGpE35Hw1vPMTaLNdW/PB6C6j1WB3b9b21BUjt/pUaLG2K+U1vBZkTM9hiqmw+KlhauQbIRe5QG5C1//RERcxQe8Xj2iNoq32h/c9jgLRpUzM0xfssb41qtrp3UMtQ7VO5EPFKK0DaZGK46A21EVn/1UlCxoeE1haQO1DSPiH8R5vZ3NYCclHbQ49QjLQ1XkAOEqMrDiKUVwjPtT1R0j4l2jZv1AKQNpkazntAbEbG+3JaJciLKO3n4w0bnlv66QVIm7IMF1vdITYhY79fZg55GRkfoXzrqHKOUfvQq6aKiw33O94g52OP8grhsqYPStqnRLpCX4C0ycxwvhZiC+Z3fbH5DvY9ahvae0uY57DWfaJkXD1nWIuMV1gSMsjYz6eao5qd7kMQI6cCxvdYXP8FZP2Hx06AzIPGXQ/rP4OM//lUcxxk3JdcYxSDY0NyDVDONrY8RM62ztAUnxFugYy/PdIScj4y/pNz9VFL1vXVCyaY+5byXsXVmN/1xKYEbXB+3R3bESKrFYJTAeV9w3vPTwuJUJG1f8Bax1JkfHC8C2RuZPzr/TVQi9f+3RmbsFGrqJZ3zzDf8tH9Hcj6Tw48BWWCjH93pDtkQWS83y6YYf3WGUBpIRFR1Baa4lMT3SHPIuPfH+EgZHzkMc1eQ3XKWcCwp+sVZLzfTldI4yPjPx7bGoH5bYOgvK84JbxmxnsmcDwyLiRqm+0HnPF+u9wg7CnhlcAs19bXIPK7Iv6uyLhPJzTDKuH3Bwww1iuhe3j8nldXkJnQGO+fkXVFt5jxn080xXuvzIPGnf/xO/2Lf+kPSA1JVk8J9YsAAAAASUVORK5CYII=",
       "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
+      "type": "image/png"
     }
   ],
   "start_url": ".",

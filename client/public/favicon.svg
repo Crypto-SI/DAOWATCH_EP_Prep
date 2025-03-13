@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#grad)"/>
+  <g fill="white" transform="translate(96, 96) scale(0.62)">
+    <!-- Stylized "DW" for DAO Watch -->
+    <path d="M80 80 L80 420 L180 420 C240 420 280 380 280 250 C280 120 240 80 180 80 L80 80 Z" stroke="white" stroke-width="16" fill="none" />
+    <path d="M320 80 L400 250 L480 80 L530 80 L400 430 L270 80 L320 80 Z" stroke="white" stroke-width="16" fill="none" />
+    <!-- Connection lines representing DAO governance -->
+    <circle cx="400" cy="250" r="24" fill="white" />
+    <circle cx="180" cy="250" r="24" fill="white" />
+    <circle cx="280" cy="150" r="16" fill="white" />
+    <circle cx="280" cy="350" r="16" fill="white" />
+    <line x1="180" y1="250" x2="280" y2="150" stroke="white" stroke-width="10" />
+    <line x1="180" y1="250" x2="280" y2="350" stroke="white" stroke-width="10" />
+    <line x1="400" y1="250" x2="280" y2="150" stroke="white" stroke-width="10" />
+    <line x1="400" y1="250" x2="280" y2="350" stroke="white" stroke-width="10" />
+  </g>
+</svg> 

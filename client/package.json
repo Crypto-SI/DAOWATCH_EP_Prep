@@ -1,19 +1,19 @@
 {
-  "name": "dao-watch-automation-client",
+  "name": "client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@testing-library/jest-dom": "^5.17.0",
+    "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
-    "axios": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
+    "react-markdown": "^8.0.7",
+    "react-router-dom": "^6.8.2",
     "react-scripts": "5.0.1",
-    "tailwindcss": "^3.3.5",
-    "postcss": "^8.4.31",
-    "autoprefixer": "^10.4.16"
+    "react-syntax-highlighter": "^15.6.1",
+    "remark-gfm": "^3.0.1",
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -39,5 +39,9 @@
       "last 1 safari version"
     ]
   },
-  "proxy": "http://localhost:5000"
+  "proxy": "http://localhost:5001",
+  "devDependencies": {
+    "serve-favicon": "^2.5.0",
+    "sharp": "^0.33.5"
+  }
 }

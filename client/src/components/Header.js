@@ -15,6 +15,7 @@ const Header = () => {
     { name: 'Submit Proposals', path: '/submit' },
     { name: 'Review Data', path: '/review' },
     { name: 'History', path: '/history' },
+    { name: 'Markdown Viewer', path: '/markdown-viewer' },
   ];
 
   return (

@@ -10,6 +10,7 @@ const SubmitProposalPage = () => {
     episodePriority: 'Yes',
     episodeArchived: 'No',
     newEpisode: false,
+    aiService: 'Sonar', // Default AI service
   });
   const [episodes, setEpisodes] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,6 +55,10 @@ const SubmitProposalPage = () => {
 
   const handleArchivedChange = (e) => {
     setFormData({ ...formData, episodeArchived: e.target.value });
+  };
+
+  const handleAiServiceChange = (e) => {
+    setFormData({ ...formData, aiService: e.target.value });
   };
 
   const addLinkField = () => {
@@ -102,7 +107,8 @@ const SubmitProposalPage = () => {
           episodeStatus: formData.episodeStatus,
           episodePriority: formData.episodePriority,
           episodeArchived: formData.episodeArchived,
-          isNewEpisode: formData.newEpisode
+          isNewEpisode: formData.newEpisode,
+          aiService: formData.aiService // Include the selected AI service
         } 
       });
     } catch (err) {
@@ -245,12 +251,26 @@ const SubmitProposalPage = () => {
           </div>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-100 text-red-700 rounded-lg">
-              {error}
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <span className="block sm:inline">{error}</span>
             </div>
           )}
 
-          <div className="flex justify-end">
+          <div className="flex justify-end items-center space-x-4">
+            <div className="w-48">
+              <label className="block text-gray-700 font-semibold mb-2">
+                AI Service
+              </label>
+              <select
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={formData.aiService}
+                onChange={handleAiServiceChange}
+              >
+                <option value="Sonar">Sonar</option>
+                <option value="QWQ">QWQ</option>
+                <option value="Llama">Llama</option>
+              </select>
+            </div>
             <button
               type="submit"
               className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center"

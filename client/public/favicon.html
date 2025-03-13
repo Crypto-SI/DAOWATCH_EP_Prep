@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DAO Watch Favicon Generator</title>
+</head>
+<body>
+  <canvas id="favicon" width="64" height="64"></canvas>
+  <script>
+    // Get the canvas element
+    const canvas = document.getElementById('favicon');
+    const ctx = canvas.getContext('2d');
+    
+    // Create gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 64, 64);
+    gradient.addColorStop(0, '#0ea5e9');
+    gradient.addColorStop(1, '#3b82f6');
+    
+    // Draw rounded rectangle background
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.roundRect(0, 0, 64, 64, 16);
+    ctx.fill();
+    
+    // Draw "DW" text
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 32px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('DW', 32, 32);
+    
+    // Convert to image
+    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Create download link
+    const link = document.createElement('a');
+    link.download = 'favicon.png';
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    
+    // Also output a larger version for logo192.png
+    const canvas2 = document.createElement('canvas');
+    canvas2.width = 192;
+    canvas2.height = 192;
+    const ctx2 = canvas2.getContext('2d');
+    
+    const gradient2 = ctx2.createLinearGradient(0, 0, 192, 192);
+    gradient2.addColorStop(0, '#0ea5e9');
+    gradient2.addColorStop(1, '#3b82f6');
+    
+    ctx2.fillStyle = gradient2;
+    ctx2.beginPath();
+    ctx2.roundRect(0, 0, 192, 192, 48);
+    ctx2.fill();
+    
+    ctx2.fillStyle = 'white';
+    ctx2.font = 'bold 96px Arial';
+    ctx2.textAlign = 'center';
+    ctx2.textBaseline = 'middle';
+    ctx2.fillText('DW', 96, 96);
+    
+    const dataUrl2 = canvas2.toDataURL('image/png');
+    const link2 = document.createElement('a');
+    link2.download = 'logo192.png';
+    link2.href = dataUrl2;
+    document.body.appendChild(link2);
+    
+    // Also output a larger version for logo512.png
+    const canvas3 = document.createElement('canvas');
+    canvas3.width = 512;
+    canvas3.height = 512;
+    const ctx3 = canvas3.getContext('2d');
+    
+    const gradient3 = ctx3.createLinearGradient(0, 0, 512, 512);
+    gradient3.addColorStop(0, '#0ea5e9');
+    gradient3.addColorStop(1, '#3b82f6');
+    
+    ctx3.fillStyle = gradient3;
+    ctx3.beginPath();
+    ctx3.roundRect(0, 0, 512, 512, 128);
+    ctx3.fill();
+    
+    ctx3.fillStyle = 'white';
+    ctx3.font = 'bold 256px Arial';
+    ctx3.textAlign = 'center';
+    ctx3.textBaseline = 'middle';
+    ctx3.fillText('DW', 256, 256);
+    
+    const dataUrl3 = canvas3.toDataURL('image/png');
+    const link3 = document.createElement('a');
+    link3.download = 'logo512.png';
+    link3.href = dataUrl3;
+    document.body.appendChild(link3);
+  </script>
+  <p>Click the links to download favicon images.</p>
+</body>
+</html> 

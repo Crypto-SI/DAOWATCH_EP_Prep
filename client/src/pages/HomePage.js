@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import heroImage from '../assets/images/DAO Watch-A Text-Badge Mockup.jpg';
+import ApiTest from '../components/ApiTest';
 
 const HomePage = () => {
   const features = [
@@ -43,7 +44,54 @@ const HomePage = () => {
   ];
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-4xl font-bold mb-6">DAO Watch Automation Tool</h1>
+      
+      <ApiTest />
+      
+      <div className="bg-white shadow-md rounded-lg p-6 mb-8">
+        <h2 className="text-2xl font-semibold mb-4">Welcome to the DAO Watch Automation Tool</h2>
+        <p className="mb-4">
+          This tool helps streamline the process of researching and documenting DAO governance proposals for the DAO Watch episodes.
+        </p>
+        <p className="mb-4">
+          Select an option below to get started:
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <Link
+            to="/submit"
+            className="bg-primary-600 hover:bg-primary-700 text-white text-center font-semibold py-3 px-4 rounded-lg"
+          >
+            Submit Proposals
+          </Link>
+          
+          <Link
+            to="/history"
+            className="bg-gray-600 hover:bg-gray-700 text-white text-center font-semibold py-3 px-4 rounded-lg"
+          >
+            View History
+          </Link>
+          
+          <Link
+            to="/markdown-viewer"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-center font-semibold py-3 px-4 rounded-lg"
+          >
+            Markdown Viewer
+          </Link>
+        </div>
+      </div>
+      
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
+        <h3 className="text-lg font-semibold text-blue-700">Getting Started</h3>
+        <ul className="list-disc ml-6 mt-2">
+          <li className="mb-1">Submit proposal links to analyze DAO governance proposals</li>
+          <li className="mb-1">Review and edit the extracted information</li>
+          <li className="mb-1">Generate markdown files for episode show notes</li>
+          <li className="mb-1">View and edit markdown files in the Markdown Viewer</li>
+        </ul>
+      </div>
+
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-lg overflow-hidden shadow-xl mb-12">
         <div className="container mx-auto px-4 py-12 md:py-20">
