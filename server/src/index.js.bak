@@ -285,11 +285,10 @@ async function processWithLlama(proposalLinks) {
   try {
     console.log('Processing proposals with Llama 3.3 API...');
     
-    // Check if Llama API key is available (using the provided token in your code)
-    const LLAMA_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJjcnlwdG9zaXh4eEBnbWFpbC5jb20iLCJpYXQiOjE3NDEyNzQyNzV9.xtHwn2Ukh_rf9K1fNalRhSxxyVAbJOj9sYJbW7V1i20";
-    if (!LLAMA_API_KEY) {
-      console.error('Llama API key is not available');
-      throw new Error('Llama API key is not configured. Using fallback.');
+    // Check if Llama API key is available from environment variables
+    if (!process.env.LLAMA_API_KEY) {
+      console.error('Llama API key is not set in environment variables');
+      throw new Error('Llama API key is not configured. Please add it to your .env file.');
     }
     
     // Prepare the prompts for each proposal link
@@ -346,7 +345,7 @@ Respond with ONLY the JSON object contained in a code block with json syntax hig
           {
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${LLAMA_API_KEY}`
+              "Authorization": `Bearer ${process.env.LLAMA_API_KEY}`
             }
           }
         );
