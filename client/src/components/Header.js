@@ -12,7 +12,7 @@ const Header = () => {
 
   const navItems = [
     { name: 'Home', path: '/' },
-    { name: 'Submit Proposals', path: '/submit' },
+    { name: 'Research Scan', path: '/submit' },
     { name: 'Review Data', path: '/review' },
     { name: 'History', path: '/history' },
     { name: 'Markdown Viewer', path: '/markdown-viewer' },

@@ -10,6 +10,73 @@ const fs = require('fs');
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 5001;
+const ELIGIBLE_DAOS_PATH = path.join(__dirname, '../../data/eligible-daos.json');
+
+function slugify(value = '') {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `dao-${Date.now()}`;
+}
+
+function readEligibleDaos() {
+  try {
+    const rawData = fs.readFileSync(ELIGIBLE_DAOS_PATH, 'utf8');
+    const daos = JSON.parse(rawData);
+    return Array.isArray(daos) ? daos : [];
+  } catch (error) {
+    console.error('Error reading eligible DAO list:', error.message);
+    return [];
+  }
+}
+
+function writeEligibleDaos(daos) {
+  fs.mkdirSync(path.dirname(ELIGIBLE_DAOS_PATH), { recursive: true });
+  fs.writeFileSync(ELIGIBLE_DAOS_PATH, `${JSON.stringify(daos, null, 2)}\n`);
+}
+
+function normalizeEligibleDao(input) {
+  const name = String(input.name || '').trim();
+  const sources = parseDaoSources(input.sources || input.source || '');
+
+  if (!name) {
+    throw new Error('DAO name is required');
+  }
+
+  if (sources.length === 0) {
+    throw new Error('At least one governance or forum source is required');
+  }
+
+  return {
+    id: input.id ? slugify(input.id) : slugify(name),
+    name,
+    sources,
+  };
+}
+
+function groupNewsArticlesByDao(newsArticles = []) {
+  return newsArticles.reduce((groups, article) => {
+    const daoName = article.daoName || 'Other DAO News';
+    if (!groups[daoName]) groups[daoName] = [];
+    groups[daoName].push(article);
+    return groups;
+  }, {});
+}
+
+function formatNewsArticlesMarkdown(newsArticles = []) {
+  const groupedNews = groupNewsArticlesByDao(newsArticles);
+  const daoNames = Object.keys(groupedNews);
+
+  if (daoNames.length === 0) {
+    return '- No recent DAO news articles found';
+  }
+
+  return daoNames.map((daoName) => (
+    `## ${daoName}\n\n${groupedNews[daoName]
+      .map(article => `- [${article.title}](${article.url})${article.source ? ` (${article.source})` : ''}${article.publishedAt ? ` - ${article.publishedAt}` : ''}`)
+      .join('\n')}`
+  )).join('\n\n');
+}
 
 // Handle favicon.ico and logo192.png requests to prevent 404 errors
 app.get('/favicon.ico', (req, res) => {
@@ -491,6 +558,540 @@ function createMockProposalData(index, link) {
   };
 }
 
+function stripHtml(value = '') {
+  return String(value)
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function decodeXmlEntities(value = '') {
+  return String(value)
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function getTextBetween(value, tagName) {
+  const match = String(value).match(new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
+  if (!match) return '';
+  return decodeXmlEntities(match[1].replace(/^<!\[CDATA\[/, '').replace(/\]\]>$/, '').trim());
+}
+
+function parseDaoSources(rawSources) {
+  const unusableValues = new Set(['none', 'cant find it', "can't find it", 'needs repair', 'needs rapair']);
+
+  if (Array.isArray(rawSources)) {
+    return rawSources
+      .map(source => String(source).trim())
+      .filter(source => source && !unusableValues.has(source.toLowerCase()));
+  }
+
+  return String(rawSources || '')
+    .split(/\r?\n|,/)
+    .map(source => source.trim())
+    .filter(source => source && !unusableValues.has(source.toLowerCase()));
+}
+
+function getSnapshotSpaceId(source) {
+  const value = String(source || '').trim();
+  const snapshotMatch = value.match(/snapshot\.org\/#\/([^/?#]+)/i) || value.match(/snapshot\.org\/#\/s:([^/?#]+)/i);
+  if (snapshotMatch) return snapshotMatch[1].replace(/^s:/, '');
+
+  if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(value)) {
+    return value;
+  }
+
+  return null;
+}
+
+function getTallySlug(source) {
+  const match = String(source || '').match(/tally\.xyz\/gov\/([^/?#]+)/i);
+  return match ? match[1] : null;
+}
+
+function getDaoNameFromUrl(source) {
+  try {
+    const url = new URL(source);
+    const host = url.hostname.replace(/^www\./, '');
+    const pathParts = url.pathname.split('/').filter(Boolean);
+
+    if (host.includes('tally.xyz') && pathParts[1]) return pathParts[1];
+    if (host.includes('mintscan.io') && pathParts[0]) return pathParts[0];
+    if (host.includes('explorers.guru')) return host.split('.')[0] || pathParts[0] || host;
+    if (host.includes('forum.') || host.includes('discuss.')) return host.split('.')[1] || host;
+    if (host.includes('dashcentral')) return 'Dash';
+    if (host.includes('pivx')) return 'PIVX';
+    if (host.includes('jup')) return 'Jup DAO';
+    if (host.includes('dfinity') || host.includes('internetcomputer')) return 'ICP';
+    if (host.includes('projectcatalyst')) return 'Cardano';
+    if (host.includes('aragon')) return 'Aragon DAO';
+
+    return host;
+  } catch (error) {
+    return 'Unknown DAO';
+  }
+}
+
+function getSourceTypeFromUrl(source) {
+  try {
+    const host = new URL(source).hostname;
+    if (host.includes('forum') || host.includes('discuss')) return 'Forum';
+    if (host.includes('tally.xyz')) return 'Tally';
+    if (host.includes('mintscan.io')) return 'Mintscan';
+    if (host.includes('explorers.guru')) return 'Explorer';
+    if (host.includes('dashcentral')) return 'DashCentral';
+    if (host.includes('aragon.org')) return 'Aragon';
+    if (host.includes('vote.jup.ag')) return 'Jup Vote';
+    return 'Governance source';
+  } catch (error) {
+    return 'Governance source';
+  }
+}
+
+function isLikelyProposalUrl(source) {
+  return /\/proposal(s)?\/[^/?#]+|\/proposals?\/[^/?#]+|proposalId=|\/governance\/proposal/i.test(source);
+}
+
+function resolveLink(source, href) {
+  if (!href || href.startsWith('mailto:') || href.startsWith('javascript:')) return null;
+  try {
+    return new URL(href, source).toString().split('#')[0];
+  } catch (error) {
+    return null;
+  }
+}
+
+function createCandidateFromUrl(source, proposalUrl, index) {
+  const daoName = getDaoNameFromUrl(source);
+  const sourceType = getSourceTypeFromUrl(source);
+  const title = `${daoName} governance proposal`;
+  const scored = scoreProposalCandidate({
+    title,
+    status: 'Active',
+    summary: proposalUrl,
+  });
+
+  return {
+    id: `source-${index}-${Buffer.from(proposalUrl).toString('base64').slice(0, 12)}`,
+    originalLink: proposalUrl,
+    title,
+    daoName,
+    status: 'Active',
+    singleSentenceSummary: `Proposal candidate discovered from ${sourceType}.`,
+    amountRequested: 'Not specified',
+    totalBudget: 'Not specified',
+    dailyVolume: 'Not specified',
+    votingDeadline: new Date().toISOString().split('T')[0],
+    pros: 'Review proposal detail for benefits.',
+    cons: 'Review proposal detail for risks.',
+    votingRecommendation: 'Abstain',
+    summary: `Proposal candidate discovered from ${source}. Use AI processing or manual review to extract full detail.`,
+    discussionScore: scored.score,
+    selectedReason: scored.selectedReason,
+    sourceType,
+  };
+}
+
+function scoreProposalCandidate(candidate) {
+  const searchableText = `${candidate.title || ''} ${candidate.summary || ''}`.toLowerCase();
+  const keywordWeights = [
+    ['treasury', 18],
+    ['grant', 16],
+    ['budget', 16],
+    ['funding', 15],
+    ['upgrade', 15],
+    ['parameter', 12],
+    ['token', 12],
+    ['incentive', 12],
+    ['security', 12],
+    ['emergency', 12],
+    ['delegate', 10],
+    ['election', 10],
+    ['revenue', 10],
+    ['partnership', 8],
+  ];
+
+  let score = 20;
+  const reasons = [];
+
+  if (candidate.status === 'Active') {
+    score += 28;
+    reasons.push('active vote');
+  }
+
+  if (candidate.votingDeadline) {
+    const deadline = new Date(candidate.votingDeadline).getTime();
+    const daysUntilDeadline = (deadline - Date.now()) / (24 * 60 * 60 * 1000);
+    if (daysUntilDeadline >= 0 && daysUntilDeadline <= 7) {
+      score += 18;
+      reasons.push('near-term voting deadline');
+    } else if (daysUntilDeadline > 7 && daysUntilDeadline <= 21) {
+      score += 8;
+      reasons.push('upcoming deadline');
+    }
+  }
+
+  keywordWeights.forEach(([keyword, weight]) => {
+    if (searchableText.includes(keyword)) {
+      score += weight;
+      reasons.push(keyword);
+    }
+  });
+
+  if ((candidate.summary || '').length > 250) {
+    score += 8;
+    reasons.push('enough detail for discussion');
+  }
+
+  return {
+    score: Math.min(score, 100),
+    selectedReason: reasons.length
+      ? `Selected because it has ${Array.from(new Set(reasons)).slice(0, 4).join(', ')}.`
+      : 'Selected as one of the newest proposal candidates from this DAO.',
+  };
+}
+
+function selectDiverseProposalCandidates(candidates, limit = 3) {
+  const sortedCandidates = [...candidates].sort((a, b) => (b.discussionScore || 0) - (a.discussionScore || 0));
+  const selected = [];
+  const selectedDaoNames = new Set();
+
+  for (const candidate of sortedCandidates) {
+    const daoKey = String(candidate.daoName || candidate.sourceType || candidate.originalLink || '')
+      .trim()
+      .toLowerCase();
+
+    if (!daoKey || selectedDaoNames.has(daoKey)) continue;
+
+    selected.push(candidate);
+    selectedDaoNames.add(daoKey);
+
+    if (selected.length >= limit) return selected;
+  }
+
+  for (const candidate of sortedCandidates) {
+    if (selected.some(selectedCandidate => selectedCandidate.originalLink === candidate.originalLink)) continue;
+
+    selected.push(candidate);
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+}
+
+async function fetchGenericProposalLinks(source, limit = 20) {
+  const response = await axios.get(source, {
+    timeout: 12000,
+    headers: {
+      'User-Agent': 'DAO Watch research assistant',
+    },
+  });
+
+  const html = String(response.data || '');
+  const linkMatches = [...html.matchAll(/href=["']([^"']+)["']/gi)];
+  const candidateLinks = [];
+  const seen = new Set();
+
+  for (const match of linkMatches) {
+    const resolvedLink = resolveLink(source, match[1]);
+    if (!resolvedLink || seen.has(resolvedLink)) continue;
+
+    if (/proposal|governance|vote|referendum|motion|discussion|thread/i.test(resolvedLink)) {
+      seen.add(resolvedLink);
+      candidateLinks.push(resolvedLink);
+    }
+
+    if (candidateLinks.length >= limit) break;
+  }
+
+  if (candidateLinks.length === 0 && isLikelyProposalUrl(source)) {
+    candidateLinks.push(source);
+  }
+
+  return candidateLinks.map((proposalUrl, index) => createCandidateFromUrl(source, proposalUrl, index));
+}
+
+async function fetchSnapshotProposals(spaceId, limit = 20) {
+  const response = await axios.post(
+    'https://hub.snapshot.org/graphql',
+    {
+      query: `query Proposals($space: String!, $first: Int!) {
+        proposals(
+          first: $first,
+          skip: 0,
+          where: { space_in: [$space] },
+          orderBy: "created",
+          orderDirection: desc
+        ) {
+          id
+          title
+          body
+          state
+          start
+          end
+          link
+          choices
+          scores_total
+          space { id name }
+        }
+      }`,
+      variables: { space: spaceId, first: limit },
+    },
+    { headers: { 'Content-Type': 'application/json' }, timeout: 12000 }
+  );
+
+  const proposals = response.data?.data?.proposals || [];
+
+  return proposals.map((proposal) => {
+    const status = proposal.state === 'active'
+      ? 'Active'
+      : proposal.state === 'closed'
+        ? 'Passed'
+        : proposal.state || 'Active';
+    const originalLink = proposal.link || `https://snapshot.org/#/${spaceId}/proposal/${proposal.id}`;
+    const summary = stripHtml(proposal.body || '').slice(0, 700);
+    const scored = scoreProposalCandidate({
+      title: proposal.title,
+      summary,
+      status,
+      votingDeadline: proposal.end ? new Date(proposal.end * 1000).toISOString().split('T')[0] : '',
+    });
+
+    return {
+      id: `snapshot-${proposal.id}`,
+      originalLink,
+      title: proposal.title || 'Untitled Snapshot proposal',
+      daoName: proposal.space?.name || spaceId,
+      status,
+      singleSentenceSummary: summary ? `${summary.slice(0, 180)}${summary.length > 180 ? '...' : ''}` : 'No proposal summary available.',
+      amountRequested: 'Not specified',
+      totalBudget: 'Not specified',
+      dailyVolume: 'Not specified',
+      votingDeadline: proposal.end ? new Date(proposal.end * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      pros: 'Review the linked proposal for benefits and expected DAO impact.',
+      cons: 'Review execution risk, budget impact, and governance tradeoffs before recording.',
+      votingRecommendation: 'Abstain',
+      summary: summary || 'No detailed body was available from Snapshot.',
+      discussionScore: scored.score,
+      selectedReason: scored.selectedReason,
+      sourceType: 'Snapshot',
+    };
+  });
+}
+
+async function fetchTallyProposalLinks(source, limit = 12) {
+  const slug = getTallySlug(source);
+  if (!slug) return [];
+
+  const response = await axios.get(`https://www.tally.xyz/gov/${slug}`, {
+    timeout: 12000,
+    headers: {
+      'User-Agent': 'DAO Watch research assistant',
+    },
+  });
+
+  const seen = new Set();
+  const links = [];
+  const regex = new RegExp(`/gov/${slug}/proposal/([0-9]+)`, 'gi');
+  let match;
+
+  while ((match = regex.exec(response.data)) && links.length < limit) {
+    const proposalId = match[1];
+    const proposalUrl = `https://www.tally.xyz/gov/${slug}/proposal/${proposalId}`;
+    if (seen.has(proposalUrl)) continue;
+    seen.add(proposalUrl);
+    const scored = scoreProposalCandidate({
+      title: `${slug} governance proposal`,
+      status: 'Active',
+      summary: proposalUrl,
+    });
+    links.push({
+      id: `tally-${slug}-${links.length}`,
+      originalLink: proposalUrl,
+      title: `${slug} governance proposal`,
+      daoName: slug,
+      status: 'Active',
+      singleSentenceSummary: 'Proposal discovered from Tally governance.',
+      amountRequested: 'Not specified',
+      totalBudget: 'Not specified',
+      dailyVolume: 'Not specified',
+      votingDeadline: new Date().toISOString().split('T')[0],
+      pros: 'Review proposal detail for benefits.',
+      cons: 'Review proposal detail for risks.',
+      votingRecommendation: 'Abstain',
+      summary: 'Proposal discovered from Tally. Use AI processing or manual review to extract full detail.',
+      discussionScore: scored.score,
+      selectedReason: scored.selectedReason,
+      sourceType: 'Tally',
+    });
+  }
+
+  return links;
+}
+
+async function findNewsSources(query, limit = 4) {
+  if (!query) return [];
+
+  try {
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
+    const response = await axios.get(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'DAO Watch research assistant',
+      },
+    });
+
+    const itemMatches = String(response.data).match(/<item>[\s\S]*?<\/item>/gi) || [];
+    return itemMatches.slice(0, limit).map((item) => ({
+      title: stripHtml(getTextBetween(item, 'title')),
+      url: getTextBetween(item, 'link'),
+      source: stripHtml(getTextBetween(item, 'source')) || 'Google News',
+      publishedAt: getTextBetween(item, 'pubDate'),
+    })).filter(item => item.title && item.url);
+  } catch (error) {
+    console.error(`Error fetching news for "${query}":`, error.message);
+    return [];
+  }
+}
+
+async function enrichProposalsWithNews(proposals, includeNews = true) {
+  if (!includeNews) return proposals;
+
+  const enriched = [];
+  for (const proposal of proposals) {
+    const query = `${proposal.daoName || ''} ${proposal.title || ''} DAO governance`;
+    let newsSources = await findNewsSources(query, 4);
+    if (newsSources.length === 0 && proposal.daoName) {
+      newsSources = await findNewsSources(`${proposal.daoName} DAO governance`, 4);
+    }
+    enriched.push({
+      ...proposal,
+      newsSources,
+    });
+  }
+  return enriched;
+}
+
+async function findRecentDaoNews(daos, perDaoLimit = 2) {
+  const newsByDao = [];
+
+  for (const dao of daos) {
+    const articlesByUrl = new Map();
+
+    const collectArticles = async (recentOnly) => {
+      const dateFilter = recentOnly ? ' when:30d' : '';
+      const queries = [
+        `"${dao.name}" DAO${dateFilter}`,
+        `"${dao.name}" governance${dateFilter}`,
+      ];
+
+      for (const query of queries) {
+        const articles = await findNewsSources(query, 6);
+        articles.forEach((article) => {
+          if (!article.url || articlesByUrl.has(article.url)) return;
+
+          articlesByUrl.set(article.url, {
+            ...article,
+            daoName: dao.name,
+            publishedAtTimestamp: article.publishedAt ? new Date(article.publishedAt).getTime() : 0,
+          });
+        });
+      }
+    };
+
+    await collectArticles(true);
+    if (articlesByUrl.size < perDaoLimit) {
+      await collectArticles(false);
+    }
+
+    const daoArticles = Array.from(articlesByUrl.values())
+      .sort((a, b) => (b.publishedAtTimestamp || 0) - (a.publishedAtTimestamp || 0))
+      .slice(0, perDaoLimit)
+      .map(({ publishedAtTimestamp, ...article }) => article);
+
+    newsByDao.push(...daoArticles);
+  }
+
+  return newsByDao;
+}
+
+async function discoverProposalCandidatesFromSources(sources) {
+  const candidates = [];
+  const scanErrors = [];
+
+  for (const source of sources) {
+    try {
+      const snapshotSpaceId = getSnapshotSpaceId(source);
+      const tallySlug = getTallySlug(source);
+
+      if (snapshotSpaceId) {
+        const snapshotCandidates = await fetchSnapshotProposals(snapshotSpaceId);
+        candidates.push(...snapshotCandidates);
+      } else if (tallySlug) {
+        const tallyCandidates = await fetchTallyProposalLinks(source);
+        candidates.push(...tallyCandidates);
+      } else if (/^https?:\/\//i.test(source)) {
+        const genericCandidates = await fetchGenericProposalLinks(source);
+        candidates.push(...genericCandidates);
+      } else {
+        scanErrors.push({ source, message: 'Unsupported DAO source. Use a Snapshot space, Tally governance URL, or proposal URL.' });
+      }
+    } catch (error) {
+      console.error(`Error scanning DAO source "${source}":`, error.message);
+      scanErrors.push({ source, message: error.message });
+    }
+  }
+
+  const dedupedCandidates = Array.from(
+    new Map(candidates.map(candidate => [candidate.originalLink, candidate])).values()
+  );
+
+  return { candidates: dedupedCandidates, scanErrors };
+}
+
+function mergeDiscoveredData(processedProposals, discoveredProposals = []) {
+  if (!Array.isArray(discoveredProposals) || discoveredProposals.length === 0) {
+    return processedProposals;
+  }
+
+  const discoveredByLink = new Map(
+    discoveredProposals.map(proposal => [proposal.originalLink, proposal])
+  );
+
+  return processedProposals.map((proposal) => {
+    const discovered = discoveredByLink.get(proposal.originalLink);
+    if (!discovered) return proposal;
+
+    const isMockProcessed = proposal.title?.startsWith('Example DAO Proposal')
+      || proposal.summary?.startsWith('This is an automatically generated summary');
+
+    if (isMockProcessed) {
+      return {
+        ...proposal,
+        ...discovered,
+        id: proposal.id,
+      };
+    }
+
+    return {
+      ...proposal,
+      originalLink: discovered.originalLink || proposal.originalLink,
+      title: proposal.title?.startsWith('Example DAO Proposal') ? discovered.title : proposal.title,
+      daoName: proposal.daoName?.startsWith('DAO ') ? discovered.daoName : proposal.daoName,
+      status: discovered.status || proposal.status,
+      singleSentenceSummary: proposal.singleSentenceSummary?.startsWith('Brief summary') ? discovered.singleSentenceSummary : proposal.singleSentenceSummary,
+      votingDeadline: discovered.votingDeadline || proposal.votingDeadline,
+      summary: proposal.summary?.startsWith('This is an automatically generated summary') ? discovered.summary : proposal.summary,
+      discussionScore: discovered.discussionScore,
+      selectedReason: discovered.selectedReason,
+      sourceType: discovered.sourceType,
+    };
+  });
+}
+
 // Mock processing function - used for Sonar and Llama until they're implemented
 async function processMockData(proposalLinks, aiService) {
   // Mock processing delay
@@ -542,10 +1143,154 @@ app.get('/api/episodes', async (req, res) => {
   }
 });
 
+// Manage the eligible DAO list used by the research scanner
+app.get('/api/eligible-daos', (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: readEligibleDaos(),
+  });
+});
+
+app.post('/api/eligible-daos', (req, res) => {
+  try {
+    const daos = readEligibleDaos();
+    const newDao = normalizeEligibleDao(req.body);
+    const existingIndex = daos.findIndex(dao => dao.id === newDao.id);
+
+    const updatedDaos = existingIndex >= 0
+      ? daos.map((dao, index) => (index === existingIndex ? newDao : dao))
+      : [...daos, newDao];
+
+    writeEligibleDaos(updatedDaos);
+
+    res.status(existingIndex >= 0 ? 200 : 201).json({
+      success: true,
+      data: newDao,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+});
+
+app.delete('/api/eligible-daos/:id', (req, res) => {
+  const daos = readEligibleDaos();
+  const updatedDaos = daos.filter(dao => dao.id !== req.params.id);
+
+  if (updatedDaos.length === daos.length) {
+    return res.status(404).json({
+      success: false,
+      message: 'DAO not found',
+    });
+  }
+
+  writeEligibleDaos(updatedDaos);
+
+  res.status(200).json({
+    success: true,
+    data: updatedDaos,
+  });
+});
+
+app.post('/api/research/scan', async (req, res) => {
+  try {
+    const daos = readEligibleDaos();
+    const selectedDaoIds = Array.isArray(req.body.daoIds) ? req.body.daoIds : daos.map(dao => dao.id);
+    const selectedDaos = daos.filter(dao => selectedDaoIds.includes(dao.id));
+
+    if (selectedDaos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No eligible DAOs selected for scanning',
+      });
+    }
+
+    const sources = selectedDaos.flatMap(dao => dao.sources || []);
+    const [{ candidates, scanErrors }, newsArticles] = await Promise.all([
+      discoverProposalCandidatesFromSources(sources),
+      findRecentDaoNews(selectedDaos, 2),
+    ]);
+
+    const selectedProposals = selectDiverseProposalCandidates(candidates, 3);
+
+    const proposalsWithNews = await enrichProposalsWithNews(selectedProposals, true);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        newsArticles,
+        proposals: proposalsWithNews,
+        proposalLinks: proposalsWithNews.map(proposal => proposal.originalLink),
+        candidatesScanned: candidates.length,
+        sourcesScanned: sources.length,
+        daosScanned: selectedDaos.length,
+        scanErrors,
+      },
+    });
+  } catch (error) {
+    console.error('Error running DAO research scan:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to run DAO research scan',
+      error: error.message,
+    });
+  }
+});
+
+// Discover proposal candidates from DAO governance sources
+app.post('/api/proposals/discover', async (req, res) => {
+  try {
+    const { daoSources, maxProposals = 4, includeNews = true } = req.body;
+    const sources = parseDaoSources(daoSources);
+
+    if (sources.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No DAO sources provided',
+      });
+    }
+
+    const { candidates: dedupedCandidates, scanErrors } = await discoverProposalCandidatesFromSources(sources);
+    const selectedProposals = selectDiverseProposalCandidates(dedupedCandidates, Number(maxProposals) || 4);
+
+    const proposalsWithNews = await enrichProposalsWithNews(selectedProposals, includeNews);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        proposals: proposalsWithNews,
+        proposalLinks: proposalsWithNews.map(proposal => proposal.originalLink),
+        candidatesScanned: dedupedCandidates.length,
+        sourcesScanned: sources.length,
+        scanErrors,
+      },
+    });
+  } catch (error) {
+    console.error('Error discovering proposals:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to discover proposals',
+      error: error.message,
+    });
+  }
+});
+
 // Process proposal links
 app.post('/api/proposals/process', async (req, res) => {
   try {
-    const { proposalLinks, episodeName, episodeStatus, episodePriority, episodeArchived, newEpisode, aiService } = req.body;
+    const {
+      proposalLinks,
+      episodeName,
+      episodeStatus,
+      episodePriority,
+      episodeArchived,
+      newEpisode,
+      aiService,
+      discoveredProposals,
+      includeNews = true,
+    } = req.body;
 
     if (!proposalLinks || proposalLinks.length === 0) {
       return res.status(400).json({
@@ -609,6 +1354,9 @@ app.post('/api/proposals/process', async (req, res) => {
       }));
     }
 
+    processedProposals = mergeDiscoveredData(processedProposals, discoveredProposals);
+    processedProposals = await enrichProposalsWithNews(processedProposals, includeNews);
+
     res.status(200).json({
       success: true,
       data: {
@@ -634,7 +1382,7 @@ app.post('/api/proposals/process', async (req, res) => {
 // Generate and download proposals as Markdown
 app.post('/api/proposals/download-md', async (req, res) => {
   try {
-    const { episodeName, episodeStatus, episodePriority, episodeArchived, proposals } = req.body;
+    const { episodeName, episodeStatus, episodePriority, episodeArchived, proposals, newsArticles = [] } = req.body;
 
     if (!proposals || proposals.length === 0) {
       return res.status(400).json({
@@ -651,6 +1399,10 @@ app.post('/api/proposals/download-md', async (req, res) => {
 Status: ${episodeStatus}
 Priority: ${episodePriority}
 Archived: ${episodeArchived}
+
+# **Recent DAO News**
+
+${formatNewsArticlesMarkdown(newsArticles)}
 
 # **Overview & Purpose**
 
@@ -690,6 +1442,15 @@ Pros: ${p.pros}
 Cons: ${p.cons}
 
 What am I voting: ${p.votingRecommendation}
+
+Why this was selected: ${p.selectedReason || 'Selected for DAO Watch review.'}
+
+Discussion score: ${p.discussionScore || 'Not scored'}
+
+News sources:
+${(p.newsSources || []).length > 0
+  ? p.newsSources.map(source => `- [${source.title}](${source.url})${source.source ? ` - ${source.source}` : ''}`).join('\n')
+  : '- No related news sources found'}
 
 OFFER DISCUSSION in the comments!
 `).join('\n')}
@@ -737,7 +1498,7 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
 // Replace the /api/proposals/save endpoint with a simpler version that just returns success
 app.post('/api/proposals/save', async (req, res) => {
   try {
-    const { episodeName, episodeStatus, episodePriority, episodeArchived, proposals } = req.body;
+    const { episodeName, episodeStatus, episodePriority, episodeArchived, proposals, newsArticles = [] } = req.body;
 
     if (!proposals || proposals.length === 0) {
       return res.status(400).json({
@@ -754,6 +1515,10 @@ app.post('/api/proposals/save', async (req, res) => {
 Status: ${episodeStatus}
 Priority: ${episodePriority}
 Archived: ${episodeArchived}
+
+# **Recent DAO News**
+
+${formatNewsArticlesMarkdown(newsArticles)}
 
 # **Overview & Purpose**
 
@@ -793,6 +1558,15 @@ Pros: ${p.pros}
 Cons: ${p.cons}
 
 What am I voting: ${p.votingRecommendation}
+
+Why this was selected: ${p.selectedReason || 'Selected for DAO Watch review.'}
+
+Discussion score: ${p.discussionScore || 'Not scored'}
+
+News sources:
+${(p.newsSources || []).length > 0
+  ? p.newsSources.map(source => `- [${source.title}](${source.url})${source.source ? ` - ${source.source}` : ''}`).join('\n')
+  : '- No related news sources found'}
 
 OFFER DISCUSSION in the comments!
 `).join('\n')}

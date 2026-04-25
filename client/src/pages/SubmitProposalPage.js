@@ -1,309 +1,340 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+
+const emptyDaoForm = {
+  name: '',
+  sources: '',
+};
 
 const SubmitProposalPage = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    proposalLinks: ['', '', '', ''],
-    episodeName: '',
-    episodeStatus: 'In Progress',
-    episodePriority: 'Yes',
-    episodeArchived: 'No',
-    newEpisode: false,
-    aiService: 'Sonar', // Default AI service
-  });
-  const [episodes, setEpisodes] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [eligibleDaos, setEligibleDaos] = useState([]);
+  const [selectedDaoIds, setSelectedDaoIds] = useState([]);
+  const [daoForm, setDaoForm] = useState(emptyDaoForm);
+  const [episodeName, setEpisodeName] = useState('');
+  const [episodeStatus, setEpisodeStatus] = useState('In Progress');
+  const [episodePriority, setEpisodePriority] = useState('Yes');
+  const [episodeArchived, setEpisodeArchived] = useState('No');
+  const [aiService, setAiService] = useState('Sonar');
+  const [isLoadingDaos, setIsLoadingDaos] = useState(true);
+  const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState('');
 
-  // Fetch episodes from the server (mock data for now)
-  useEffect(() => {
-    // In a real app, this would be an API call
-    setEpisodes([
-      { id: 1, name: 'Episode 1: DAO Governance Trends' },
-      { id: 2, name: 'Episode 2: DeFi Protocol Updates' },
-      { id: 3, name: 'Episode 3: NFT Marketplace Governance' },
-    ]);
-  }, []);
-
-  const handleInputChange = (index, value) => {
-    const updatedLinks = [...formData.proposalLinks];
-    updatedLinks[index] = value;
-    setFormData({ ...formData, proposalLinks: updatedLinks });
-  };
-
-  const handleEpisodeChange = (e) => {
-    const value = e.target.value;
-    if (value === 'new') {
-      setFormData({ ...formData, newEpisode: true, episodeName: '' });
-    } else {
-      setFormData({ ...formData, newEpisode: false, episodeName: value });
-    }
-  };
-
-  const handleNewEpisodeNameChange = (e) => {
-    setFormData({ ...formData, episodeName: e.target.value });
-  };
-
-  const handleStatusChange = (e) => {
-    setFormData({ ...formData, episodeStatus: e.target.value });
-  };
-
-  const handlePriorityChange = (e) => {
-    setFormData({ ...formData, episodePriority: e.target.value });
-  };
-
-  const handleArchivedChange = (e) => {
-    setFormData({ ...formData, episodeArchived: e.target.value });
-  };
-
-  const handleAiServiceChange = (e) => {
-    setFormData({ ...formData, aiService: e.target.value });
-  };
-
-  const addLinkField = () => {
-    setFormData({
-      ...formData,
-      proposalLinks: [...formData.proposalLinks, ''],
-    });
-  };
-
-  const removeLinkField = (index) => {
-    const updatedLinks = formData.proposalLinks.filter((_, i) => i !== index);
-    setFormData({ ...formData, proposalLinks: updatedLinks });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const fetchEligibleDaos = async () => {
+    setIsLoadingDaos(true);
     setError('');
 
-    // Validate form
-    const filledLinks = formData.proposalLinks.filter(link => link.trim() !== '');
-    if (filledLinks.length === 0) {
-      setError('Please enter at least one proposal link');
-      setIsLoading(false);
-      return;
-    }
+    try {
+      const response = await fetch('/api/eligible-daos');
+      const data = await response.json();
 
-    if (!formData.episodeName && formData.newEpisode) {
-      setError('Please enter a name for the new episode');
-      setIsLoading(false);
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to load eligible DAO list');
+      }
+
+      setEligibleDaos(data.data);
+      setSelectedDaoIds(data.data.map((dao) => dao.id));
+    } catch (err) {
+      setError(err.message || 'Failed to load eligible DAO list');
+    } finally {
+      setIsLoadingDaos(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEligibleDaos();
+  }, []);
+
+  const toggleDaoSelection = (daoId) => {
+    setSelectedDaoIds((currentIds) => (
+      currentIds.includes(daoId)
+        ? currentIds.filter((id) => id !== daoId)
+        : [...currentIds, daoId]
+    ));
+  };
+
+  const handleAddDao = async (event) => {
+    event.preventDefault();
+    setError('');
+
+    try {
+      const response = await fetch('/api/eligible-daos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(daoForm),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to add DAO');
+      }
+
+      setDaoForm(emptyDaoForm);
+      await fetchEligibleDaos();
+    } catch (err) {
+      setError(err.message || 'Failed to add DAO');
+    }
+  };
+
+  const handleRemoveDao = async (daoId) => {
+    setError('');
+
+    try {
+      const response = await fetch(`/api/eligible-daos/${daoId}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to remove DAO');
+      }
+
+      setEligibleDaos(data.data);
+      setSelectedDaoIds((currentIds) => currentIds.filter((id) => id !== daoId));
+    } catch (err) {
+      setError(err.message || 'Failed to remove DAO');
+    }
+  };
+
+  const handleScan = async () => {
+    setIsScanning(true);
+    setError('');
+
+    if (selectedDaoIds.length === 0) {
+      setError('Select at least one eligible DAO to scan.');
+      setIsScanning(false);
       return;
     }
 
     try {
-      // In a real app, this would be an API call to process the links
-      console.log('Submitting proposal links:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Navigate to review page (in a real app, we'd pass the processed data)
-      navigate('/review', { 
-        state: { 
-          proposalLinks: filledLinks,
-          episodeName: formData.episodeName,
-          episodeStatus: formData.episodeStatus,
-          episodePriority: formData.episodePriority,
-          episodeArchived: formData.episodeArchived,
-          isNewEpisode: formData.newEpisode,
-          aiService: formData.aiService // Include the selected AI service
-        } 
+      const response = await fetch('/api/research/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ daoIds: selectedDaoIds }),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Research scan failed');
+      }
+
+      if (!data.data.proposals?.length) {
+        throw new Error('No proposal candidates were found for the selected DAO list.');
+      }
+
+      navigate('/review', {
+        state: {
+          proposalLinks: data.data.proposalLinks,
+          discoveredProposals: data.data.proposals,
+          discoverySummary: {
+            candidatesScanned: data.data.candidatesScanned,
+            sourcesScanned: data.data.sourcesScanned,
+            daosScanned: data.data.daosScanned,
+            scanErrors: data.data.scanErrors || [],
+          },
+          newsArticles: data.data.newsArticles || [],
+          includeNews: true,
+          researchMode: 'auto',
+          episodeName: episodeName || `DAO Watch Research ${new Date().toISOString().split('T')[0]}`,
+          episodeStatus,
+          episodePriority,
+          episodeArchived,
+          isNewEpisode: true,
+          aiService,
+        },
       });
     } catch (err) {
-      setError('An error occurred while processing your request. Please try again.');
-      console.error('Error submitting proposal links:', err);
+      setError(err.message || 'Research scan failed');
     } finally {
-      setIsLoading(false);
+      setIsScanning(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Submit DAO Proposals</h1>
-      
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-        <form onSubmit={handleSubmit}>
-          <h2 className="text-xl font-semibold mb-4">Episode Information</h2>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-semibold mb-2">
-              Episode Assignment
-            </label>
-            <select
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              value={formData.newEpisode ? 'new' : formData.episodeName}
-              onChange={handleEpisodeChange}
-              required
-            >
-              <option value="">Select an episode</option>
-              {episodes.map((episode) => (
-                <option key={episode.id} value={episode.name}>
-                  {episode.name}
-                </option>
-              ))}
-              <option value="new">+ Create New Episode</option>
-            </select>
-          </div>
-
-          {formData.newEpisode && (
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">
-                New Episode Name
-              </label>
-              <input
-                type="text"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                placeholder="Enter episode name"
-                value={formData.episodeName}
-                onChange={handleNewEpisodeNameChange}
-                required
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                Status
-              </label>
-              <select
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                value={formData.episodeStatus}
-                onChange={handleStatusChange}
-              >
-                <option value="In Progress">In Progress</option>
-                <option value="Done">Done</option>
-                <option value="Planned">Planned</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                Priority
-              </label>
-              <select
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                value={formData.episodePriority}
-                onChange={handlePriorityChange}
-              >
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-gray-700 font-semibold mb-2">
-                Archived
-              </label>
-              <select
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                value={formData.episodeArchived}
-                onChange={handleArchivedChange}
-              >
-                <option value="No">No</option>
-                <option value="Yes">Yes</option>
-              </select>
-            </div>
-          </div>
-
-          <h2 className="text-xl font-semibold mb-4">Proposal Links</h2>
-          <div className="mb-6">
-            <p className="text-gray-600 mb-4">
-              Enter 3-4 DAO proposal links to process in this batch
-            </p>
-
-            {formData.proposalLinks.map((link, index) => (
-              <div key={index} className="flex mb-3">
-                <input
-                  type="url"
-                  className="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                  placeholder={`Proposal link ${index + 1}`}
-                  value={link}
-                  onChange={(e) => handleInputChange(index, e.target.value)}
-                />
-                {formData.proposalLinks.length > 1 && (
-                  <button
-                    type="button"
-                    className="ml-2 p-3 text-red-500 hover:text-red-700"
-                    onClick={() => removeLinkField(index)}
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                  </button>
-                )}
-              </div>
-            ))}
-
-            {formData.proposalLinks.length < 8 && (
-              <button
-                type="button"
-                className="mt-2 flex items-center text-primary-600 hover:text-primary-800"
-                onClick={addLinkField}
-              >
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Add Another Link
-              </button>
-            )}
-          </div>
-
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-              <span className="block sm:inline">{error}</span>
-            </div>
-          )}
-
-          <div className="flex justify-end items-center space-x-4">
-            <div className="w-48">
-              <label className="block text-gray-700 font-semibold mb-2">
-                AI Service
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                value={formData.aiService}
-                onChange={handleAiServiceChange}
-              >
-                <option value="Sonar">Sonar</option>
-                <option value="QWQ">QWQ</option>
-                <option value="Llama">Llama</option>
-              </select>
-            </div>
-            <button
-              type="submit"
-              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 flex items-center"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                'Process Proposals'
-              )}
-            </button>
-          </div>
-        </form>
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">DAO Research Scan</h1>
+        <p className="text-gray-600">
+          Manage the eligible DAO list, pull the top 2 recent news stories for each selected DAO, and choose from 3 proposal candidates for the next episode.
+        </p>
       </div>
 
-      <div className="bg-gray-100 rounded-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">How It Works</h2>
-        <ol className="list-decimal list-inside space-y-2 text-gray-700">
-          <li>Enter 3-4 DAO proposal links you want to process</li>
-          <li>Select an existing episode or create a new one</li>
-          <li>Our AI will extract and structure the proposal data</li>
-          <li>Review the extracted data before it's added to Notion</li>
-          <li>Confirm to save the organized proposals to your Notion database</li>
-        </ol>
+      {error && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <section className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Eligible DAOs</h2>
+            <button
+              type="button"
+              className="text-sm text-primary-700 hover:text-primary-900 font-semibold"
+              onClick={() => setSelectedDaoIds(eligibleDaos.map((dao) => dao.id))}
+            >
+              Select all
+            </button>
+          </div>
+
+          {isLoadingDaos ? (
+            <p className="text-gray-500">Loading eligible DAO list...</p>
+          ) : (
+            <div className="space-y-3">
+              {eligibleDaos.map((dao) => (
+                <div key={dao.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1"
+                        checked={selectedDaoIds.includes(dao.id)}
+                        onChange={() => toggleDaoSelection(dao.id)}
+                      />
+                      <span>
+                        <span className="block font-semibold text-gray-900">{dao.name}</span>
+                        <span className="block text-sm text-gray-500">
+                          {(dao.sources || []).length} source{(dao.sources || []).length === 1 ? '' : 's'}
+                        </span>
+                      </span>
+                    </label>
+                    <button
+                      type="button"
+                      className="text-sm text-red-600 hover:text-red-800 font-semibold"
+                      onClick={() => handleRemoveDao(dao.id)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {(dao.sources || []).map((source) => (
+                      <a
+                        key={source}
+                        href={source}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs bg-gray-100 text-gray-700 rounded px-2 py-1 hover:bg-gray-200"
+                      >
+                        {source}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <aside className="space-y-6">
+          <section className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Add DAO</h2>
+            <form onSubmit={handleAddDao} className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">DAO Name</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={daoForm.name}
+                  onChange={(event) => setDaoForm({ ...daoForm, name: event.target.value })}
+                  placeholder="Example DAO"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Sources</label>
+                <textarea
+                  className="w-full p-3 border border-gray-300 rounded-lg h-32"
+                  value={daoForm.sources}
+                  onChange={(event) => setDaoForm({ ...daoForm, sources: event.target.value })}
+                  placeholder="One governance, Snapshot, Tally, forum, or proposal source per line"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-4 rounded-lg"
+              >
+                Add to Eligible List
+              </button>
+            </form>
+          </section>
+
+          <section className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Episode Setup</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Episode Name</label>
+                <input
+                  type="text"
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={episodeName}
+                  onChange={(event) => setEpisodeName(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">AI Service</label>
+                <select
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={aiService}
+                  onChange={(event) => setAiService(event.target.value)}
+                >
+                  <option value="Sonar">Sonar</option>
+                  <option value="QWQ">QWQ</option>
+                  <option value="Llama">Llama</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Status</label>
+                  <select
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    value={episodeStatus}
+                    onChange={(event) => setEpisodeStatus(event.target.value)}
+                  >
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                    <option value="Planned">Planned</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Priority</label>
+                  <select
+                    className="w-full p-3 border border-gray-300 rounded-lg"
+                    value={episodePriority}
+                    onChange={(event) => setEpisodePriority(event.target.value)}
+                  >
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Archived</label>
+                <select
+                  className="w-full p-3 border border-gray-300 rounded-lg"
+                  value={episodeArchived}
+                  onChange={(event) => setEpisodeArchived(event.target.value)}
+                >
+                  <option value="No">No</option>
+                  <option value="Yes">Yes</option>
+                </select>
+              </div>
+              <button
+                type="button"
+                className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-4 rounded-lg disabled:bg-gray-400"
+                onClick={handleScan}
+                disabled={isScanning || isLoadingDaos}
+              >
+                {isScanning ? 'Scanning eligible DAOs...' : 'Scan News and Proposals'}
+              </button>
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
 };
 
-export default SubmitProposalPage; 
+export default SubmitProposalPage;

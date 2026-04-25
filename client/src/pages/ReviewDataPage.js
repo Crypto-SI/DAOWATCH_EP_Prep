@@ -1,6 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+const groupNewsArticlesByDao = (newsArticles = []) => (
+  newsArticles.reduce((groups, article) => {
+    const daoName = article.daoName || 'Other DAO News';
+    if (!groups[daoName]) groups[daoName] = [];
+    groups[daoName].push(article);
+    return groups;
+  }, {})
+);
+
+const formatNewsArticlesMarkdown = (newsArticles = []) => {
+  const groupedNews = groupNewsArticlesByDao(newsArticles);
+  const daoNames = Object.keys(groupedNews);
+
+  if (daoNames.length === 0) {
+    return '- No recent DAO news articles found';
+  }
+
+  return daoNames.map((daoName) => (
+    `## ${daoName}\n\n${groupedNews[daoName]
+      .map(article => `- [${article.title}](${article.url})${article.source ? ` (${article.source})` : ''}${article.publishedAt ? ` - ${article.publishedAt}` : ''}`)
+      .join('\n')}`
+  )).join('\n\n');
+};
+
 const ReviewDataPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -10,6 +34,9 @@ const ReviewDataPage = () => {
   const [episodePriority, setEpisodePriority] = useState('Yes');
   const [episodeArchived, setEpisodeArchived] = useState('No');
   const [aiService, setAiService] = useState('');
+  const [researchMode, setResearchMode] = useState('manual');
+  const [discoverySummary, setDiscoverySummary] = useState(null);
+  const [newsArticles, setNewsArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,12 +53,27 @@ const ReviewDataPage = () => {
       return;
     }
 
-    const { proposalLinks, episodeName, episodeStatus, episodePriority, episodeArchived, aiService } = location.state;
+    const {
+      proposalLinks,
+      discoveredProposals,
+      discoverySummary,
+      includeNews,
+      newsArticles,
+      researchMode,
+      episodeName,
+      episodeStatus,
+      episodePriority,
+      episodeArchived,
+      aiService
+    } = location.state;
     setEpisodeName(episodeName);
     setEpisodeStatus(episodeStatus || 'In Progress');
     setEpisodePriority(episodePriority || 'Yes');
     setEpisodeArchived(episodeArchived || 'No');
     setAiService(aiService || 'Default');
+    setResearchMode(researchMode || 'manual');
+    setDiscoverySummary(discoverySummary || null);
+    setNewsArticles(newsArticles || []);
 
     // Simulate API call to process links
     const fetchData = async () => {
@@ -53,6 +95,8 @@ const ReviewDataPage = () => {
             episodePriority,
             episodeArchived,
             newEpisode: location.state.isNewEpisode,
+            discoveredProposals,
+            includeNews,
             aiService,
           }),
         });
@@ -125,8 +169,12 @@ const ReviewDataPage = () => {
           votingRecommendation: p.votingRecommendation,
           status: p.status,
           votingDeadline: p.votingDeadline,
-          summary: p.summary
-        }))
+          summary: p.summary,
+          discussionScore: p.discussionScore,
+          selectedReason: p.selectedReason,
+          newsSources: p.newsSources || []
+        })),
+        newsArticles
       };
       
       console.log('Generating markdown preview');
@@ -170,6 +218,12 @@ Status: ${episodeStatus}
 Priority: ${episodePriority}
 Archived: ${episodeArchived}
 
+# **Recent DAO News**
+
+${newsArticles.length > 0
+  ? formatNewsArticlesMarkdown(newsArticles)
+  : '- No recent DAO news articles found'}
+
 # **Overview & Purpose**
 
 Identify interesting proposals and appraise them.
@@ -208,6 +262,15 @@ Pros: ${p.pros}
 Cons: ${p.cons}
 
 What am I voting: ${p.votingRecommendation}
+
+Why this was selected: ${p.selectedReason || 'Selected for DAO Watch review.'}
+
+Discussion score: ${p.discussionScore || 'Not scored'}
+
+News sources:
+${(p.newsSources || []).length > 0
+  ? p.newsSources.map(source => `- [${source.title}](${source.url})${source.source ? ` - ${source.source}` : ''}`).join('\n')
+  : '- No related news sources found'}
 
 OFFER DISCUSSION in the comments!
 `).join('\n')}
@@ -274,8 +337,12 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
           votingRecommendation: p.votingRecommendation,
           status: p.status,
           votingDeadline: p.votingDeadline,
-          summary: p.summary
-        }))
+          summary: p.summary,
+          discussionScore: p.discussionScore,
+          selectedReason: p.selectedReason,
+          newsSources: p.newsSources || []
+        })),
+        newsArticles
       };
       
       console.log('Downloading show notes as markdown');
@@ -393,6 +460,19 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
   }
 
   const activeProposal = proposals[activeProposalIndex] || {};
+  const groupedNewsArticles = groupNewsArticlesByDao(newsArticles);
+  const groupedNewsDaoNames = Object.keys(groupedNewsArticles);
+  const getProposalTabTitle = (proposal) => {
+    if (!proposal.title) return proposal.daoName || 'Proposal';
+    const shortId = proposal.originalLink?.split('/').filter(Boolean).pop()?.slice(0, 8);
+    const genericTitle = `${proposal.daoName} governance proposal`;
+
+    if (proposal.title.toLowerCase() === genericTitle.toLowerCase()) {
+      return shortId ? `${proposal.sourceType || 'Proposal'} ${shortId}` : 'Proposal';
+    }
+
+    return proposal.title.replace(`${proposal.daoName} `, '').replace(/^governance proposal$/i, 'Proposal');
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -485,6 +565,51 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
                   />
                 </div>
               </div>
+              {researchMode === 'auto' && discoverySummary && (
+                <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800 mb-2">Auto-Scan Summary</h3>
+                  <p className="text-sm text-gray-700">
+                    Scanned {discoverySummary.daosScanned || 'eligible'} DAO{discoverySummary.daosScanned === 1 ? '' : 's'}, {discoverySummary.sourcesScanned} source{discoverySummary.sourcesScanned === 1 ? '' : 's'}, and reviewed {discoverySummary.candidatesScanned} proposal candidate{discoverySummary.candidatesScanned === 1 ? '' : 's'}.
+                  </p>
+                  {discoverySummary.scanErrors?.length > 0 && (
+                    <ul className="list-disc ml-5 mt-2 text-sm text-amber-700">
+                      {discoverySummary.scanErrors.map((scanError, index) => (
+                        <li key={`${scanError.source}-${index}`}>
+                          {scanError.source}: {scanError.message}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+              {groupedNewsDaoNames.length > 0 && (
+                <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-800 mb-3">Recent DAO News</h3>
+                  <div className="space-y-4">
+                    {groupedNewsDaoNames.map((daoName) => (
+                      <div key={daoName}>
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">{daoName}</h4>
+                        <div className="space-y-2">
+                          {groupedNewsArticles[daoName].map((article, index) => (
+                            <a
+                              key={`${article.url}-${index}`}
+                              href={article.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block border border-gray-200 rounded-lg p-3 hover:bg-gray-50"
+                            >
+                              <span className="font-medium text-primary-700">{article.title}</span>
+                              <span className="block text-sm text-gray-500">
+                                {article.source || 'News source'}{article.publishedAt ? ` - ${article.publishedAt}` : ''}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <h2 className="text-xl font-semibold mb-4">Proposals</h2>
@@ -503,11 +628,16 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
                       }
                     `}
                   >
-                    <div className="flex items-center">
+                    <div className="flex items-center text-left">
                       <span className={`inline-flex items-center justify-center h-6 w-6 rounded-full mr-2 ${getStatusBadgeClass(proposal.status)}`}>
                         {index + 1}
                       </span>
-                      <span className="truncate max-w-[150px]">{proposal.daoName}</span>
+                      <span className="min-w-0">
+                        <span className="block truncate max-w-[180px]">{proposal.daoName}</span>
+                        <span className="block truncate max-w-[180px] text-xs font-normal text-gray-500">
+                          {getProposalTabTitle(proposal)}
+                        </span>
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -639,6 +769,29 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
                       <option value="Abstain">Abstain</option>
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-1">
+                      Discussion Score
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full p-2 border border-gray-300 rounded-lg"
+                      value={activeProposal.discussionScore || ''}
+                      onChange={(e) => handleInputChange(activeProposal.id, 'discussionScore', e.target.value)}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-700 font-medium mb-1">
+                      Selection Reason
+                    </label>
+                    <textarea
+                      className="w-full p-2 border border-gray-300 rounded-lg h-20"
+                      value={activeProposal.selectedReason || ''}
+                      onChange={(e) => handleInputChange(activeProposal.id, 'selectedReason', e.target.value)}
+                    />
+                  </div>
                   
                   <div className="md:col-span-2">
                     <label className="block text-gray-700 font-medium mb-1">
@@ -671,6 +824,32 @@ ${proposals.map((p, index) => `${p.daoName} proposal - ${(index + 1) * 5}:00`).j
                       value={activeProposal.summary}
                       onChange={(e) => handleInputChange(activeProposal.id, 'summary', e.target.value)}
                     />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-gray-700 font-medium mb-2">
+                      News Sources
+                    </label>
+                    {(activeProposal.newsSources || []).length > 0 ? (
+                      <div className="space-y-2">
+                        {activeProposal.newsSources.map((source, index) => (
+                          <a
+                            key={`${source.url}-${index}`}
+                            href={source.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block border border-gray-200 rounded-lg p-3 bg-white hover:bg-gray-50"
+                          >
+                            <span className="font-medium text-primary-700">{source.title}</span>
+                            <span className="block text-sm text-gray-500">
+                              {source.source || 'News source'}{source.publishedAt ? ` - ${source.publishedAt}` : ''}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No related news sources found.</p>
+                    )}
                   </div>
                   
                   <div className="md:col-span-2">

@@ -7,7 +7,7 @@ const HomePage = () => {
   const features = [
     {
       title: 'Intuitive Proposal Submission',
-      description: 'Submit 3-4 DAO proposal links per batch with our sleek, mobile-optimized interface.',
+      description: 'Maintain an eligible DAO list and run a focused scan when preparing a new episode.',
       icon: (
         <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -16,7 +16,7 @@ const HomePage = () => {
     },
     {
       title: 'AI-Driven Processing',
-      description: 'Perplexity AI automatically extracts and structures proposal data with precision.',
+      description: 'Automatically ranks proposal candidates and prepares structured review data.',
       icon: (
         <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -25,7 +25,7 @@ const HomePage = () => {
     },
     {
       title: 'Notion Integration',
-      description: 'Seamlessly populate your Notion database with structured data, grouped by episode.',
+      description: 'Generate organized markdown notes grouped by episode.',
       icon: (
         <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path>
@@ -34,7 +34,7 @@ const HomePage = () => {
     },
     {
       title: 'Data Validation',
-      description: 'Review and edit extracted data before submission to ensure accuracy.',
+      description: 'Review 2 recent news stories per eligible DAO and 3 proposal candidates before publishing notes.',
       icon: (
         <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -52,7 +52,7 @@ const HomePage = () => {
       <div className="bg-white shadow-md rounded-lg p-6 mb-8">
         <h2 className="text-2xl font-semibold mb-4">Welcome to the DAO Watch Automation Tool</h2>
         <p className="mb-4">
-          This tool helps streamline the process of researching and documenting DAO governance proposals for the DAO Watch episodes.
+          This tool helps streamline DAO Watch episode research by scanning your eligible DAO list for recent news and important governance proposals.
         </p>
         <p className="mb-4">
           Select an option below to get started:
@@ -63,7 +63,7 @@ const HomePage = () => {
             to="/submit"
             className="bg-primary-600 hover:bg-primary-700 text-white text-center font-semibold py-3 px-4 rounded-lg"
           >
-            Submit Proposals
+            Start Research Scan
           </Link>
           
           <Link
@@ -85,8 +85,8 @@ const HomePage = () => {
       <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-8">
         <h3 className="text-lg font-semibold text-blue-700">Getting Started</h3>
         <ul className="list-disc ml-6 mt-2">
-          <li className="mb-1">Submit proposal links to analyze DAO governance proposals</li>
-          <li className="mb-1">Review and edit the extracted information</li>
+          <li className="mb-1">Add or remove DAOs from your eligible research list</li>
+          <li className="mb-1">Auto-scan for 2 recent news stories per eligible DAO and 3 proposal candidates</li>
           <li className="mb-1">Generate markdown files for episode show notes</li>
           <li className="mb-1">View and edit markdown files in the Markdown Viewer</li>
         </ul>
@@ -101,14 +101,14 @@ const HomePage = () => {
                 DAO Watch Automation Tool
               </h1>
               <p className="text-xl mb-6">
-                Revolutionize how DAO governance proposals are researched and organized for your content series.
+                Scan eligible DAOs for recent news and proposal candidates for your content series.
               </p>
               <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <Link
                   to="/submit"
                   className="bg-white text-primary-600 hover:bg-gray-100 font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 text-center"
                 >
-                  Submit Proposals
+                  Start Scan
                 </Link>
                 <a
                   href="#features"
@@ -155,13 +155,13 @@ const HomePage = () => {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Say goodbye to tedious manual research and hello to a streamlined, automated process that frees up your time for what matters most—creating great content.
+            Run one scan to collect recent DAO news, rank proposal candidates, and prepare the next episode notes.
           </p>
           <Link
             to="/submit"
             className="bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 inline-block"
           >
-            Start Automating Now
+            Start Research Scan
           </Link>
         </div>
       </section>

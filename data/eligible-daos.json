@@ -1,0 +1,65 @@
+[
+  {
+    "id": "pivx",
+    "name": "PIVX",
+    "sources": [
+      "https://pivx.org/proposals",
+      "https://forum.pivx.org/"
+    ]
+  },
+  {
+    "id": "dash",
+    "name": "Dash",
+    "sources": [
+      "https://www.dashcentral.org/",
+      "https://www.dash.org/forum/"
+    ]
+  },
+  {
+    "id": "arbitrum",
+    "name": "Arbitrum",
+    "sources": [
+      "https://www.tally.xyz/gov/arbitrum",
+      "https://forum.arbitrum.foundation/"
+    ]
+  },
+  {
+    "id": "cosmos-hub",
+    "name": "Cosmos Hub",
+    "sources": [
+      "https://cosmos.explorers.guru/governance",
+      "https://forum.cosmos.network/"
+    ]
+  },
+  {
+    "id": "jupiter",
+    "name": "Jupiter",
+    "sources": [
+      "https://vote.jup.ag/",
+      "https://discuss.jup.ag/"
+    ]
+  },
+  {
+    "id": "cardano-catalyst",
+    "name": "Cardano Catalyst",
+    "sources": [
+      "https://projectcatalyst.io/funds/15"
+    ]
+  },
+  {
+    "id": "internet-computer",
+    "name": "Internet Computer",
+    "sources": [
+      "https://forum.dfinity.org/",
+      "https://nns.internetcomputer.org/dashboard"
+    ]
+  },
+  {
+    "id": "akash",
+    "name": "Akash",
+    "sources": [
+      "https://www.mintscan.io/akash/proposals",
+      "https://archiveforum.akash.network/"
+    ]
+  }
+]
