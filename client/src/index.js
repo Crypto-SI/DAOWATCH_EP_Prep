@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import './index.css';
 import App from './App';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
 import SubmitProposalPage from './pages/SubmitProposalPage';
 import ReviewDataPage from './pages/ReviewDataPage';
 import HistoryPage from './pages/HistoryPage';
@@ -13,41 +16,53 @@ import MarkdownViewerPage from './pages/MarkdownViewerPage';
 const router = createBrowserRouter(
   [
     {
+      path: '/login',
+      element: <LoginPage />,
+    },
+    {
       path: '/',
-      element: <App />,
+      element: (
+        <ProtectedRoute>
+          <App />
+        </ProtectedRoute>
+      ),
       children: [
         {
           index: true,
-          element: <HomePage />
+          element: <HomePage />,
         },
         {
           path: 'submit',
-          element: <SubmitProposalPage />
+          element: <SubmitProposalPage />,
         },
         {
           path: 'review',
-          element: <ReviewDataPage />
+          element: <ReviewDataPage />,
         },
         {
           path: 'history',
-          element: <HistoryPage />
+          element: <HistoryPage />,
         },
         {
           path: 'markdown-viewer',
-          element: <MarkdownViewerPage />
-        }
-      ]
-    }
+          element: <MarkdownViewerPage />,
+        },
+      ],
+    },
   ],
   {
     future: {
       v7_startTransition: true,
-      v7_relativeSplatPath: true
-    }
+      v7_relativeSplatPath: true,
+    },
   }
 );
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
-  <RouterProvider router={router} />
-); 
+  <React.StrictMode>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  </React.StrictMode>
+);
