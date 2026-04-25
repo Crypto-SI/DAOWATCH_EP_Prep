@@ -40,19 +40,19 @@ const Footer = () => {
               <h4 className="text-lg font-semibold mb-2">Support</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-gray-300 hover:text-white transition">
+                  <button type="button" className="text-gray-300 hover:text-white transition">
                     Help Center
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-300 hover:text-white transition">
+                  <button type="button" className="text-gray-300 hover:text-white transition">
                     Contact Us
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-300 hover:text-white transition">
+                  <button type="button" className="text-gray-300 hover:text-white transition">
                     Feedback
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>

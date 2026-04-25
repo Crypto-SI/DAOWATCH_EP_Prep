@@ -7,7 +7,6 @@ const MarkdownViewerPage = () => {
   const navigate = useNavigate();
   const [markdown, setMarkdown] = useState('');
   const [fileName, setFileName] = useState('');
-  const [uploadedFile, setUploadedFile] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +28,6 @@ const MarkdownViewerPage = () => {
       return;
     }
 
-    setUploadedFile(file);
     setFileName(file.name);
     setError('');
 
@@ -52,7 +50,6 @@ const MarkdownViewerPage = () => {
   const handleClear = () => {
     setMarkdown('');
     setFileName('');
-    setUploadedFile(null);
   };
 
   const handleSendToAPI = async () => {

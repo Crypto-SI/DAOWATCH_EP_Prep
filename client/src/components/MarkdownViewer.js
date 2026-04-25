@@ -27,20 +27,22 @@ const MarkdownViewer = ({ markdown }) => {
               </code>
             );
           },
-          h1: ({ node, ...props }) => <h1 className="text-3xl font-bold mb-4 mt-6 text-gray-800" {...props} />,
-          h2: ({ node, ...props }) => <h2 className="text-2xl font-bold mb-3 mt-5 text-gray-800" {...props} />,
-          h3: ({ node, ...props }) => <h3 className="text-xl font-bold mb-2 mt-4 text-gray-800" {...props} />,
+          h1: ({ node, children, ...props }) => <h1 className="text-3xl font-bold mb-4 mt-6 text-gray-800" {...props}>{children}</h1>,
+          h2: ({ node, children, ...props }) => <h2 className="text-2xl font-bold mb-3 mt-5 text-gray-800" {...props}>{children}</h2>,
+          h3: ({ node, children, ...props }) => <h3 className="text-xl font-bold mb-2 mt-4 text-gray-800" {...props}>{children}</h3>,
           p: ({ node, ...props }) => <p className="mb-4 text-gray-700" {...props} />,
           ul: ({ node, ...props }) => <ul className="list-disc ml-8 mb-4 text-gray-700" {...props} />,
           ol: ({ node, ...props }) => <ol className="list-decimal ml-8 mb-4 text-gray-700" {...props} />,
           li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-          a: ({ node, ...props }) => (
+          a: ({ node, children, ...props }) => (
             <a 
               className="text-blue-600 hover:text-blue-800 hover:underline" 
               target="_blank"
               rel="noopener noreferrer"
               {...props} 
-            />
+            >
+              {children}
+            </a>
           ),
           blockquote: ({ node, ...props }) => (
             <blockquote className="border-l-4 border-gray-200 pl-4 italic my-4" {...props} />
@@ -61,8 +63,8 @@ const MarkdownViewer = ({ markdown }) => {
           ),
           td: ({ node, ...props }) => <td className="px-6 py-4 whitespace-nowrap" {...props} />,
           hr: ({ node, ...props }) => <hr className="my-6 border-gray-300" {...props} />,
-          img: ({ node, ...props }) => (
-            <img className="max-w-full h-auto my-4 mx-auto rounded-lg shadow-md" {...props} />
+          img: ({ node, alt = '', ...props }) => (
+            <img className="max-w-full h-auto my-4 mx-auto rounded-lg shadow-md" alt={alt} {...props} />
           ),
         }}
       >
